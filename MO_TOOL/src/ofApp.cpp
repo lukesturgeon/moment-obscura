@@ -46,12 +46,12 @@ void ofApp::update(){
     for (int i = 0; i < myNodes.size(); i++) {
         
         if(isMousePressed){
-            myAttractor.attract(&myNodes[i]);
+            myAttractor.attract(myNodes[i]);
         }
         
-        myNodes[i].update();
+        myNodes[i]->update();
         
-        points.push_back(myNodes[i].position);
+        points.push_back(myNodes[i]->position);
     }
     
     // update the mesh with new points
@@ -115,7 +115,7 @@ void ofApp::draw(){
         ofSetColor(255);
         ofFill();
         for (int i = 0; i < myNodes.size(); i++) {
-            ofRect(myNodes[i].position.x, myNodes[i].position.y, 1, 1);
+            ofRect(myNodes[i]->position.x, myNodes[i]->position.y, 1, 1);
         }
     }
     
@@ -138,12 +138,11 @@ void ofApp::initGrid(){
             float xpos = x * (gridSize/(xCount-1)) + (ofGetWidth()-gridSize)/2;
             float ypos = y * (gridSize/(yCount-1)) + (ofGetHeight()-gridSize)/2;
             
-            Node n = *new Node();
-            n.setPosition(xpos, ypos);
-            n.setVelocity(0,0);
-            n.setBoundary(0, 0, ofGetWidth(), ofGetHeight());
-            n.setDamping(0.02);
-            
+            ofPtr<Node> n(new Node());
+            n->setPosition(xpos, ypos);
+            n->setVelocity(0,0);
+            n->setBoundary(0, 0, ofGetWidth(), ofGetHeight());
+            n->setDamping(0.02);
             myNodes.push_back(n);
         }
     }
@@ -175,12 +174,11 @@ void ofApp::keyPressed(int key){
         case 'r':
             // insert 3 new points (i triangle)
             for (int i = 0; i < 3; i++) {
-                Node n = *new Node();
-                n.setPosition(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()));
-                n.setVelocity(0,0);
-                n.setBoundary(0, 0, ofGetWidth(), ofGetHeight());
-                n.setDamping(0.02);
-                
+                ofPtr<Node> n(new Node());
+                n->setPosition(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()));
+                n->setVelocity(0,0);
+                n->setBoundary(0, 0, ofGetWidth(), ofGetHeight());
+                n->setDamping(0.02);
                 myNodes.push_back(n);
             }
             triangulation.triangulate();

@@ -23,6 +23,6 @@ public:
     float ramp;
     
     // apply attraction to a Node
-    void attract(Node * _node);
+    void attract(ofPtr<Node> _node);
 };
 #endif

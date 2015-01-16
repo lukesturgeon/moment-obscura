@@ -31,7 +31,8 @@ public:
     float gridSize = 600;
     
     // Nodes
-    vector<Node> myNodes;
+    vector< ofPtr<Node> > myNodes;
+    // look at ofPtr example
     
     // Attractor
     Attractor myAttractor;

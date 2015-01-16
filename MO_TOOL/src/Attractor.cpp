@@ -8,7 +8,7 @@ Attractor::Attractor() {
     ramp = 0.5;
 }
 
-void Attractor::attract(Node * _node){
+void Attractor::attract(ofPtr<Node> _node){
     // calculate distance
     float dx = x - _node->position.x;
     float dy = y - _node->position.y;
