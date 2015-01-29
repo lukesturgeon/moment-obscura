@@ -1,17 +1,5 @@
 #include "ofApp.h"
 
-
-/*
- 
- TODO
- ----
- c = remove 3 points
- clean code
- measure code performance
- improve code performance
- 
- */
-
 void ofApp::setup(){
     ofSetWindowTitle("Moment Obscura");
     
@@ -19,6 +7,23 @@ void ofApp::setup(){
     ofEnableSmoothing();
     ofBackground(0);
     ofSetColor(255);
+    
+    // we add this listener before setting up so the initial value is correct
+	radius.addListener(this, &ofApp::attractorRadiusChanged);
+    strength.addListener(this, &ofApp::attractorStrengthChanged);
+    ramp.addListener(this, &ofApp::attractorRampChanged);
+    
+    // setup GUI
+    gui.setup();
+    gui.add( attractorMoveX.setup( "move x", 200, 0, ofGetWidth()/2) );
+    gui.add( attractorMoveY.setup( "move y", 200, 0, ofGetHeight()/2) );
+    
+    gui.add( attractorSpeedX.setup( "speed x", 2, 0.1, 5) );
+    gui.add( attractorSpeedY.setup( "speed y", 2, 0.1, 5) );
+    
+    gui.add( radius.setup( "radius", 200, 10, ofGetWidth()) );
+    gui.add( strength.setup( "strength", -5, -50, 50) );
+    gui.add( ramp.setup( "ramp", 0.1, 0.001, 1) );
     
     // setup myNodes array
     initGrid();
@@ -35,22 +40,43 @@ void ofApp::setup(){
 }
 
 
+//--------------------------------------------------------------
+void ofApp::attractorRadiusChanged(float &attractorRadius){
+	myAttractor.radius = attractorRadius;
+}
+
+//--------------------------------------------------------------
+void ofApp::attractorStrengthChanged(float &attractorStrength){
+	myAttractor.strength = attractorStrength;
+}
+
+//--------------------------------------------------------------
+void ofApp::attractorRampChanged(float &attractorRamp){
+	myAttractor.ramp = attractorRamp;
+}
+
+//--------------------------------------------------------------
 void ofApp::update(){
     vidGrabber.update();
     
-    myAttractor.x = ofGetMouseX();
-    myAttractor.y = ofGetMouseY();
+    float ang1 = ofDegToRad(angleX);
+    float ang2 = ofDegToRad(angleY);
+    
+    myAttractor.x = ofGetWidth()/2 + (attractorMoveX * cos(ang1));
+    myAttractor.y = ofGetHeight()/2 + (attractorMoveY * sin(ang2));
+    
+    angleX += attractorSpeedX;
+    angleY += attractorSpeedY;
+    
+//    myAttractor.x = ofGetMouseX();
+//    myAttractor.y = ofGetMouseY();
     
     vector<ofPoint> points;
     
+    // update all the nodes
     for (int i = 0; i < myNodes.size(); i++) {
-        
-        if(isMousePressed){
-            myAttractor.attract(myNodes[i]);
-        }
-        
+        myAttractor.attract(myNodes[i]);
         myNodes[i]->update();
-        
         points.push_back(myNodes[i]->position);
     }
     
@@ -103,6 +129,9 @@ void ofApp::draw(){
         ofPushStyle();
         ofSetColor(255);
         triangulation.triangleMesh.drawWireframe();
+        
+        ofNoFill();
+        ofCircle( myAttractor.x, myAttractor.y, myAttractor.radius );
         ofPopStyle();
     }
     
@@ -119,16 +148,25 @@ void ofApp::draw(){
         }
     }
     
-    // show help text
-    ofSetColor(255);
-    ofDrawBitmapString("v: toggle vertices", 10, 20);
-    ofDrawBitmapString("f: toggle faces", 10, 40);
-    ofDrawBitmapString("w: toggle wireframe", 10, 60);
-    ofDrawBitmapString("r: add random points", 10, 80);
-    ofDrawBitmapString("x: reset grid", 10, 100);
-    ofDrawBitmapString("p: save pdf", 10, 120);
-    ofDrawBitmapString("' ' : save frame", 10, 140);
-    ofDrawBitmapString(ofToString(ofGetFrameRate())+"fps", 10, 170);
+    if(doShowHelp){
+        // show the GUI
+        gui.draw();
+        
+        
+        // show help text
+        ofPushMatrix();
+            ofTranslate(0, 200);
+            ofSetColor(255);
+            ofDrawBitmapString("v: toggle vertices", 10, 20);
+            ofDrawBitmapString("f: toggle faces", 10, 40);
+            ofDrawBitmapString("w: toggle wireframe", 10, 60);
+            ofDrawBitmapString("r: add random points", 10, 80);
+            ofDrawBitmapString("x: reset grid", 10, 100);
+            ofDrawBitmapString("p: save pdf", 10, 120);
+            ofDrawBitmapString("' ' : save frame", 10, 140);
+            ofDrawBitmapString(ofToString(ofGetFrameRate())+"fps", 10, 170);
+        ofPopMatrix();
+    }
 }
 
 
@@ -150,6 +188,11 @@ void ofApp::initGrid(){
 
 void ofApp::keyPressed(int key){
     switch (key) {
+            
+        case 'h':
+            doShowHelp = !doShowHelp;
+            break;
+            
         case 'x':
             myNodes.clear();
             initGrid();

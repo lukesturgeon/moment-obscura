@@ -4,6 +4,7 @@
 #include "ofxDelaunay.h"
 #include "Attractor.h"
 #include "Node.h"
+#include "ofxGui.h"
 
 class ofApp : public ofBaseApp{
     
@@ -15,6 +16,10 @@ public:
     void keyPressed(int key);
     void mousePressed(int x, int y, int button);
     void mouseReleased(int x, int y, int button);
+    
+    void attractorRadiusChanged(float & attractorRadius);
+    void attractorStrengthChanged(float & attractorStrength);
+    void attractorRampChanged(float & attractorRamp);
     void initGrid();
     
     //video
@@ -36,11 +41,25 @@ public:
     
     // Attractor
     Attractor myAttractor;
+    float angleX;
+    float angleY;
     
     // Input
     bool isMousePressed = false;
     
+    // GUI
+    ofxFloatSlider radius;
+    ofxFloatSlider strength;
+    ofxFloatSlider ramp;
+    ofxFloatSlider attractorMoveX;
+    ofxFloatSlider attractorMoveY;
+    ofxFloatSlider attractorSpeedX;
+    ofxFloatSlider attractorSpeedY;
+    
+    ofxPanel gui;
+    
     // display
+    bool doShowHelp = true;
     bool doShowFaces = true;
     bool doShowWireframe = false;
     bool doShowVertices = false;
