@@ -1,5 +1,10 @@
 <group>
-	<radius>259.4</radius>
-	<strength>-34.25</strength>
+	<radius>200</radius>
+	<strength>-5</strength>
 	<ramp>0.1</ramp>
+<group/>
+	<move_x>200</move_x>
+	<move_y>200</move_y>
+	<speed_x>0.3</speed_x>
+	<speed_y>0.3</speed_y>
 </group>

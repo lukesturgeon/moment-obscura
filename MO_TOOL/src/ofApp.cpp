@@ -1,5 +1,15 @@
 #include "ofApp.h"
 
+
+/**
+ 
+ TODO
+ 
+ Ðrandom range with focus area, like toxi - then random within the center of the screen
+ Ðmaybe include an opposite attractor?
+ **/
+
+
 void ofApp::setup(){
     ofSetWindowTitle("Moment Obscura");
     
@@ -18,12 +28,13 @@ void ofApp::setup(){
     gui.add( attractorMoveX.setup( "move x", 200, 0, ofGetWidth()/2) );
     gui.add( attractorMoveY.setup( "move y", 200, 0, ofGetHeight()/2) );
     
-    gui.add( attractorSpeedX.setup( "speed x", 2, 0.1, 5) );
-    gui.add( attractorSpeedY.setup( "speed y", 2, 0.1, 5) );
+    gui.add( attractorSpeedX.setup( "speed x", 0.3, 0.1, 2) );
+    gui.add( attractorSpeedY.setup( "speed y", 0.3, 0.1, 2) );
     
     gui.add( radius.setup( "radius", 200, 10, ofGetWidth()) );
-    gui.add( strength.setup( "strength", -5, -50, 50) );
-    gui.add( ramp.setup( "ramp", 0.1, 0.001, 1) );
+    gui.add( strength.setup( "strength", -5, -10, 10) );
+    gui.add( ramp.setup( "ramp", 0.1, 0.01, 0.5) );
+    gui.add( maxTriangleArea.setup( "max area", 300, 1, ofGetHeight()) );
     
     // setup myNodes array
     initGrid();
@@ -106,17 +117,21 @@ void ofApp::draw(){
             cx = (f[i].getVertex(0).x + f[i].getVertex(1).x + f[i].getVertex(2).x) / 3;
             cy = (f[i].getVertex(0).y + f[i].getVertex(1).y + f[i].getVertex(2).y) / 3;
             
-            // get the colour for this triangle
-            px = ofMap(cx, 0, ofGetWidth(), camWidth, 0);
-            py = ofMap(cy, 0, ofGetHeight(), 0, camHeight);
-            ofColor col = pixelsRef.getColor(px, py);
-            ofSetColor(col);
-            ofFill();
-            
-            // draw the triangle
-            ofTriangle(f[i].getVertex(0).x, f[i].getVertex(0).y,
-                       f[i].getVertex(1).x, f[i].getVertex(1).y,
-                       f[i].getVertex(2).x, f[i].getVertex(2).y);
+            // get the size of the triangle
+            if (abs(f[i].getVertex(0).x - cx) < maxTriangleArea) {
+                
+                // get the colour for this triangle
+                px = ofMap(cx, 0, ofGetWidth(), camWidth, 0);
+                py = ofMap(cy, 0, ofGetHeight(), 0, camHeight);
+                ofColor col = pixelsRef.getColor(px, py);
+                ofSetColor(col);
+                ofFill();
+                
+                // draw the triangle
+                ofTriangle(f[i].getVertex(0).x, f[i].getVertex(0).y,
+                           f[i].getVertex(1).x, f[i].getVertex(1).y,
+                           f[i].getVertex(2).x, f[i].getVertex(2).y);
+            }
         }
     }
     
@@ -195,7 +210,7 @@ void ofApp::keyPressed(int key){
             
         case 'x':
             myNodes.clear();
-            initGrid();
+//            initGrid();
             break;
             
         case 'v':

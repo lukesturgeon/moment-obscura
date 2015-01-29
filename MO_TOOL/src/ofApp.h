@@ -55,6 +55,7 @@ public:
     ofxFloatSlider attractorMoveY;
     ofxFloatSlider attractorSpeedX;
     ofxFloatSlider attractorSpeedY;
+    ofxFloatSlider maxTriangleArea;
     
     ofxPanel gui;
     
