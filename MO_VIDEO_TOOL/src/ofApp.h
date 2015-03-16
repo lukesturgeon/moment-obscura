@@ -23,7 +23,10 @@ class ofApp : public ofBaseApp{
         void dragEvent(ofDragInfo dragInfo);
         void gotMessage(ofMessage msg);
     
-        void radiusChanged(float &r);
+        void radiusChanged(float & n);
+        void attractionChanged(float & n);
+        void repulsionChanged(float & n);
+        void rampChanged(float & n);
     
         ofVideoPlayer 		fingerMovie;
         bool                isPlaying;
@@ -41,7 +44,6 @@ class ofApp : public ofBaseApp{
         float r_angle_deg_x;
         float r_angle_deg_y;
         float r_speed;
-        float maxTriangleArea;
     
         //internal settings
         float camWidth;
@@ -49,6 +51,11 @@ class ofApp : public ofBaseApp{
         bool showHelp;
         ofRectangle outputWindow;
     
+        // Parameters to change
         ofxPanel gui;
         ofParameter<float> radius;
+        ofParameter<float> attraction;
+        ofParameter<float> repulsion;
+        ofParameter<float> ramp;
+        ofParameter<float> maxTriangleArea;
 };

@@ -2,8 +2,7 @@
 
 // write our boolean remove function
 bool shouldRemove(Node &n){
-    if( n.outOfBounds() )return true;
-    else return false;
+    return n.outOfBounds();
 }
 
 
@@ -25,31 +24,53 @@ void ofApp::setup(){
     showHelp = true;
     
     // Setup GeometricStuff
-    myAttractor.strength = -5;
-    myAttractor.ramp = 0.1;
-    a_speed = 1;
-    myRepeller.strength = +5;
-    myRepeller.ramp = 0.1;
-    r_speed = 2;
-    maxTriangleArea = 300;
+//    myAttractor.strength = -5;
+//    myAttractor.ramp = 0.1;
+    a_speed = .5;
+//    myRepeller.strength = +5;
+//    myRepeller.ramp = 0.1;
+    r_speed = 1.5;
     
     radius.addListener(this, &ofApp::radiusChanged);
+    attraction.addListener(this, &ofApp::attractionChanged);
+    repulsion.addListener(this, &ofApp::repulsionChanged);
+    ramp.addListener(this, &ofApp::rampChanged);
     
     //GUI
     gui.setup();
     gui.setPosition(20, 20+camHeight+80);
     gui.add(radius.set( "radius", 300, 10, 900 ));
+    gui.add(attraction.set( "attraction", 0, 0, +5 ));
+    gui.add(repulsion.set( "repulsion", 0, 0, -5 ));
+    gui.add(ramp.set( "ramp", 0.1, 0, 0.9 ));
+    gui.add(maxTriangleArea.set( "max size", 300, 0, 1000 ));
 
 }
 
 //--------------------------------------------------------------
 void ofApp::exit(){
 	radius.removeListener(this, &ofApp::radiusChanged);
+    attraction.removeListener(this, &ofApp::attractionChanged);
+    repulsion.removeListener(this, &ofApp::repulsionChanged);
+    ramp.removeListener(this, &ofApp::rampChanged);
 }
 
-void ofApp::radiusChanged(float &r){
-    myAttractor.radius = r;
-    myRepeller.radius = r;
+void ofApp::radiusChanged(float & n){
+    myAttractor.radius = n;
+    myRepeller.radius = n;
+}
+
+void ofApp::attractionChanged(float & n){
+    myAttractor.strength = n;
+}
+
+void ofApp::repulsionChanged(float & n){
+    myRepeller.strength = n;
+}
+
+void ofApp::rampChanged(float & n){
+    myAttractor.ramp = n;
+    myRepeller.ramp = n;
 }
 
 //--------------------------------------------------------------
@@ -78,10 +99,10 @@ void ofApp::update(){
     
     vector<ofPoint> points;
     
-    
     // update all the nodes
     for (int i = 0; i < myNodes.size(); i++) {
         myAttractor.attract( &myNodes[i] );
+        myRepeller.attract( &myNodes[i] );
         myNodes[i].update();
         points.push_back(myNodes[i].position);
     }
@@ -131,19 +152,20 @@ void ofApp::draw(){
     }
     
     
-    // draw geometry
-    ofPushStyle();
-    ofSetColor(200, 100, 200);
-    ofNoFill();
-    ofCircle( myAttractor.x, myAttractor.y, myAttractor.radius );
-    ofCircle( myRepeller.x, myRepeller.y, myRepeller.radius );
-    triangulation.triangleMesh.drawWireframe();
-    ofPopStyle();
-    
-    
     if (showHelp) {
+        
+        // draw geometry
+        ofPushStyle();
+        
+        ofSetColor(200, 100, 200);
+        ofNoFill();
+        ofCircle( myAttractor.x, myAttractor.y, myAttractor.radius );
+        ofCircle( myRepeller.x, myRepeller.y, myRepeller.radius );
+        triangulation.triangleMesh.drawWireframe();
+        
         //draw the help window
         ofSetColor(255);
+        ofFill();
         ofRect(0, 0, camWidth+40, ofGetHeight());
         fingerMovie.draw(20, 20, camWidth, camHeight);
         
@@ -161,6 +183,8 @@ void ofApp::draw(){
         ofDrawBitmapString("x clear", 20, 120);
         ofDrawBitmapString("? toggle help", 20, 140);
         ofPopMatrix();
+        
+        ofPopStyle();
     }
     
     
@@ -172,10 +196,11 @@ void ofApp::keyPressed(int key){
     switch(key){
         case 'n' :
             // insert 3 new points (i triangle)
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3*5; i++) {
                 Node n = Node();
-                n.setPosition(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()));
-                n.setVelocity(0,0);
+//                n.setPosition(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()));
+//                n.setPosition(ofGetMouseX(), ofGetMouseY());
+//                n.setPosition(myRepeller.x, myRepeller.y);
                 n.setBoundary( 0,0,ofGetWidth(),ofGetHeight() );
                 n.setDamping(0.001);
                 myNodes.push_back( n );
@@ -215,12 +240,15 @@ void ofApp::keyReleased(int key){
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y ){
-
 }
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-
+    Node n = Node();
+    n.setPosition( x, y );
+    n.setBoundary( 0,0,ofGetWidth(),ofGetHeight() );
+    n.setDamping(0.001);
+    myNodes.push_back( n );
 }
 
 //--------------------------------------------------------------
