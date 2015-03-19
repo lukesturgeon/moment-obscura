@@ -12,10 +12,10 @@ void ofApp::setup(){
     ofBackground(255,255,255);
     ofSetVerticalSync(true);
     
-    fingerMovie.loadMovie("movies/C.mp4");
-    fingerMovie.setLoopState(OF_LOOP_NONE);
-    fingerMovie.play();
-    isPlaying = true;
+    fingerMovie.loadMovie("movies/C.mov");
+//    fingerMovie.setLoopState(OF_LOOP_NONE);
+    isRecording = false;
+    doSave = false;
     
     // in/out measurements
     outputWindow = ofRectangle(0, 0, ofGetWidth(), ofGetHeight());
@@ -24,26 +24,25 @@ void ofApp::setup(){
     showHelp = true;
     
     // Setup GeometricStuff
-//    myAttractor.strength = -5;
-//    myAttractor.ramp = 0.1;
     a_speed = .5;
-//    myRepeller.strength = +5;
-//    myRepeller.ramp = 0.1;
     r_speed = 1.5;
     
     radius.addListener(this, &ofApp::radiusChanged);
     attraction.addListener(this, &ofApp::attractionChanged);
     repulsion.addListener(this, &ofApp::repulsionChanged);
     ramp.addListener(this, &ofApp::rampChanged);
+    friction.addListener(this, &ofApp::frictionChanged);
     
     //GUI
     gui.setup();
     gui.setPosition(20, 20+camHeight+80);
-    gui.add(radius.set( "radius", 300, 10, 900 ));
-    gui.add(attraction.set( "attraction", 0, 0, +5 ));
-    gui.add(repulsion.set( "repulsion", 0, 0, -5 ));
-    gui.add(ramp.set( "ramp", 0.1, 0, 0.9 ));
-    gui.add(maxTriangleArea.set( "max size", 300, 0, 1000 ));
+    gui.add(radius.set( "radius", 900, 10, 1280 ));
+    gui.add(attraction.set( "attraction", 1, 0, +5 ));
+    gui.add(repulsion.set( "repulsion", -1.2, 0, -5 ));
+    gui.add(ramp.set( "ramp", 0.3, 0.001, 0.9 ));
+    gui.add(friction.set( "friction", 0.001, 0, 0.1 ));
+    gui.add(scatter.set( "scatter", 30, 2, 250 ));
+    gui.add(maxTriangleArea.set( "max size", 100, 0, 400 ));
 
 }
 
@@ -53,6 +52,7 @@ void ofApp::exit(){
     attraction.removeListener(this, &ofApp::attractionChanged);
     repulsion.removeListener(this, &ofApp::repulsionChanged);
     ramp.removeListener(this, &ofApp::rampChanged);
+    friction.removeListener(this, &ofApp::frictionChanged);
 }
 
 void ofApp::radiusChanged(float & n){
@@ -73,18 +73,44 @@ void ofApp::rampChanged(float & n){
     myRepeller.ramp = n;
 }
 
-//--------------------------------------------------------------
-void ofApp::update(){
-    
-    if (isPlaying && fingerMovie.getIsMovieDone()) {
-        isPlaying = false;
-        cout << "finished playing" << endl;
+void ofApp::frictionChanged(float & n){
+    for (int i = 0; i < myNodes.size(); i++) {
+        myNodes[i].setDamping(n);
     }
-    
-    // ELSE
-    
-    fingerMovie.update();
-    
+}
+
+void ofApp::startRecording() {
+    // start recording from beginning
+    fingerMovie.setPosition(0);
+    fingerMovie.play();
+    isRecording = true;
+    cout << "START RECORDING" << endl;
+}
+
+void ofApp::stopRecording() {
+    // stop recording and save data
+    fingerMovie.stop();
+    isRecording = false;
+    pointRecorder.saveFile( ofToDataPath( "MyDataFile.csv" ) );
+    cout << "STOP RECORDING" << endl;
+}
+
+void ofApp::createPointNear(float x, float y, float radius) {
+    Node n = Node();
+    n.setPosition( x+ofRandom(-radius,radius), y+ofRandom(-radius,radius) );
+    n.setBoundary( 0,0,ofGetWidth(),ofGetHeight() );
+    n.setDamping(0.001);
+    myNodes.push_back( n );
+}
+
+void ofApp::updateTriangulation() {
+    // update the mesh with new points
+    triangulation.reset();
+    triangulation.addPoints(pointData);
+    triangulation.triangulate();
+}
+
+void ofApp::updateSimulation(){
     //math to move the attractor
     myAttractor.x = ofGetWidth()/2 + (100 * cos( ofDegToRad(a_angle_deg_x) ));
     myAttractor.y = ofGetHeight()/2 + (100 * sin( ofDegToRad(a_angle_deg_y) ));
@@ -97,24 +123,88 @@ void ofApp::update(){
     r_angle_deg_x += r_speed;
     r_angle_deg_y += r_speed;
     
-    vector<ofPoint> points;
     
     // update all the nodes
+    pointData.clear();
     for (int i = 0; i < myNodes.size(); i++) {
         myAttractor.attract( &myNodes[i] );
         myRepeller.attract( &myNodes[i] );
         myNodes[i].update();
-        points.push_back(myNodes[i].position);
+        pointData.push_back(myNodes[i].position);
+    }
+    ofRemove(myNodes, shouldRemove);
+}
+
+//--------------------------------------------------------------
+void ofApp::update(){
+    
+    fingerMovie.update();
+    
+    // record the points as a string "x:y&x:y"
+    if (isRecording)
+    {
+        updateSimulation();
+        
+        unsigned long now = ofGetElapsedTimeMillis();
+        if(now - lastTimer > 33.333)
+        {
+            string data = "";
+            for (int i = 0; i < pointData.size(); i++) {
+                data += ofToString(pointData[i].x)+":"+ofToString(pointData[i].y)+"&";
+            }
+            
+            // remove last "&"
+            data = data.substr(0, data.size()-1);
+            
+            // save in CSV
+            int row = pointRecorder.numRows;
+            pointRecorder.setInt(row, 0, currentFrame);
+            pointRecorder.setString(row, 1, data);
+            
+            currentFrame++;
+            lastTimer = now;
+        }
+        
+        // change the triangle maths
+        updateTriangulation();
+    }
+    else if(isRendering){
+        
+        unsigned long now = ofGetElapsedTimeMillis();
+        if(now - lastTimer > 60)
+        {
+            // parse the data in to pointData
+            pointData.clear();
+            vector <string> s = ofSplitString(pointRecorder.getString(currentFrame, 1), "&");
+            
+            for(int i = 0; i < s.size(); i++)
+            {
+                if(!s[i].empty())
+                {
+                    vector <string> ss = ofSplitString(s[i], ":");
+                    pointData.push_back( ofPoint(ofToFloat(ss[0]),
+                                                 ofToFloat(ss[1])) );
+                }
+            }
+            
+            // update the triangle mesh
+            updateTriangulation();
+            
+            if(currentFrame < pointRecorder.numRows-1)
+            {
+                currentFrame++;
+                lastTimer = now;
+            }
+            else {
+                isRendering = false;
+                cout << "FINISHED RENDERING" << endl;
+            }
+        }
     }
     
-    ofRemove(myNodes, shouldRemove);
-    
-    
-    // update the mesh with new points
-    triangulation.reset();
-    triangulation.addPoints(points);
-    triangulation.triangulate();
 }
+
+
 
 
 //--------------------------------------------------------------
@@ -152,6 +242,16 @@ void ofApp::draw(){
     }
     
     
+    if (doSave){
+        ofSaveScreen(ofToString(currentFrame, 4) +".png");
+        doSave = false;
+    }
+    
+    if (isRendering) {
+        ofSaveScreen(ofToString(currentFrame, 4) +".png");
+    }
+    
+    
     if (showHelp) {
         
         // draw geometry
@@ -170,18 +270,40 @@ void ofApp::draw(){
         fingerMovie.draw(20, 20, camWidth, camHeight);
         
         ofSetColor(0);
-        ofDrawBitmapString("frame: " + ofToString(fingerMovie.getCurrentFrame()) + "/"+ofToString(fingerMovie.getTotalNumFrames()),20,20+camHeight+20);
-        ofDrawBitmapString("duration: " + ofToString(fingerMovie.getPosition()*fingerMovie.getDuration(),2) + "/"+ofToString(fingerMovie.getDuration(),2),20,20+camHeight+40);
+        
+        ofPushMatrix();
+        ofTranslate(20, 20+camHeight+20);
+        
+        ofDrawBitmapString("frame: " + ofToString(currentFrame)+"/" + ofToString(pointRecorder.numRows), 0, 0);
+        ofDrawBitmapString("points: " + ofToString(pointData.size()),0,20);
+        
+        if (isRecording)
+        {
+            ofDrawBitmapString("recording... ", 0, 40);
+        }
+        else if(isRendering)
+        {
+            ofDrawBitmapString("rendering... ", 0, 40);
+        }
+        else
+        {
+            ofDrawBitmapString("ready...", 0, 40);
+        }
+        
+        ofPopMatrix();
         
         gui.draw();
         
         ofPushMatrix();
-        ofTranslate(0, ofGetHeight()-160);
-        ofDrawBitmapString("< reset video", 20, 60);
-        ofDrawBitmapString("> end video", 20, 80);
-        ofDrawBitmapString("n node", 20, 100);
-        ofDrawBitmapString("x clear", 20, 120);
-        ofDrawBitmapString("? toggle help", 20, 140);
+        ofTranslate(0, ofGetHeight()-220);
+        ofDrawBitmapString("'<' reset video", 20, 60);
+        ofDrawBitmapString("'>' end video", 20, 80);
+        ofDrawBitmapString("'n' node", 20, 100);
+        ofDrawBitmapString("'x' clear", 20, 120);
+        ofDrawBitmapString("'s' save image", 20, 140);
+        ofDrawBitmapString("'e' export frames", 20, 160);
+        ofDrawBitmapString("' ' record", 20, 180);
+        ofDrawBitmapString("'?' toggle help", 20, 200);
         ofPopMatrix();
         
         ofPopStyle();
@@ -195,39 +317,108 @@ void ofApp::keyPressed(int key){
     
     switch(key){
         case 'n' :
-            // insert 3 new points (i triangle)
-            for (int i = 0; i < 3*5; i++) {
-                Node n = Node();
-//                n.setPosition(ofRandom(ofGetWidth()), ofRandom(ofGetHeight()));
-//                n.setPosition(ofGetMouseX(), ofGetMouseY());
-//                n.setPosition(myRepeller.x, myRepeller.y);
-                n.setBoundary( 0,0,ofGetWidth(),ofGetHeight() );
-                n.setDamping(0.001);
-                myNodes.push_back( n );
+            if (isRecording)
+            {
+                // insert 3 new points (i triangle)
+                int qty;
+                qty = 3*ofRandom(30);
+                for (int i = 0; i < qty; i++) {
+                    createPointNear(myRepeller.x, myRepeller.y, 600);
+                }
             }
             break;
             
         case 'x' :
+            currentFrame = 0;
+            pointData.clear();
+            pointRecorder.clear();
             myNodes.clear();
+            triangulation.reset();
+            break;
+            
+        case 's' :
+            doSave = true;
+            break;
+            
+            case 'e':
+            if(!isRecording && pointRecorder.numRows>0)
+            {
+                currentFrame = 0;
+                isRendering = true;
+                cout << "RENDER" << endl;
+            }
             break;
             
         case '?' :
             showHelp = !showHelp;
             break;
             
+        case ' ':
+            
+            if(isRecording)
+            {
+                stopRecording();
+            }
+            else
+            {
+                startRecording();
+            }
+            
+            break;
+            
         case OF_KEY_LEFT:
-            // jump to beginning
-            fingerMovie.setPosition(0);
-            fingerMovie.play();
-            isPlaying = true;
-            cout << "reset" << endl;
+            
+            if(!isRecording && pointRecorder.numRows>0 && currentFrame > 0)
+            {
+                // go back in time
+                currentFrame--;
+                
+                // parse the data in to pointData
+                pointData.clear();
+                vector <string> s = ofSplitString(pointRecorder.getString(currentFrame, 1), "&");
+                
+                for(int i = 0; i < s.size(); i++)
+                {
+                    if(!s[i].empty())
+                    {
+                        vector <string> ss = ofSplitString(s[i], ":");
+                        pointData.push_back( ofPoint(ofToFloat(ss[0]),
+                                                     ofToFloat(ss[1])) );
+                    }
+                }
+                
+                // update the triangle mesh
+                updateTriangulation();
+            }
+            
             break;
             
         case OF_KEY_RIGHT:
-            // jump to end
-            fingerMovie.setPosition(1);
-            isPlaying = true;
-            cout << "end" << endl;
+           
+            if(!isRecording && pointRecorder.numRows>0 && currentFrame < pointRecorder.numRows-1)
+            {
+                // go forward in time
+                currentFrame++;
+                
+                // parse the data in to pointData
+                pointData.clear();
+                vector <string> s = ofSplitString(pointRecorder.getString(currentFrame, 1), "&");
+                
+                for(int i = 0; i < s.size(); i++)
+                {
+                    if(!s[i].empty())
+                    {
+                        vector <string> ss = ofSplitString(s[i], ":");
+                        pointData.push_back( ofPoint(ofToFloat(ss[0]),
+                                                     ofToFloat(ss[1])) );
+                    }
+                }
+                
+                // update the triangle mesh
+                updateTriangulation();
+            }
+            
+            
             break;
     }
 
@@ -244,11 +435,10 @@ void ofApp::mouseMoved(int x, int y ){
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-    Node n = Node();
-    n.setPosition( x, y );
-    n.setBoundary( 0,0,ofGetWidth(),ofGetHeight() );
-    n.setDamping(0.001);
-    myNodes.push_back( n );
+    if(isRecording)
+    {
+        createPointNear(x, y, scatter);
+    }
 }
 
 //--------------------------------------------------------------
@@ -272,6 +462,6 @@ void ofApp::gotMessage(ofMessage msg){
 }
 
 //--------------------------------------------------------------
-void ofApp::dragEvent(ofDragInfo dragInfo){ 
-
+void ofApp::dragEvent(ofDragInfo dragInfo){
+    
 }

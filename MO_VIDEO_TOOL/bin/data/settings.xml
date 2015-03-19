@@ -1,0 +1,8 @@
+<group>
+	<radius>900</radius>
+	<attraction>1.875</attraction>
+	<repulsion>-2.425</repulsion>
+	<ramp>0.1</ramp>
+	<friction>0.001</friction>
+	<max_size>20</max_size>
+</group>

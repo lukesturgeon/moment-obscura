@@ -2,8 +2,11 @@
 
 #include "ofMain.h"
 #include "ofxGui.h"
+#include "ofxCsv.h"
 #include "ofxDelaunay.h"
 #include "ofxGeometricStuff.h"
+
+using namespace wng;
 
 class ofApp : public ofBaseApp{
 
@@ -27,9 +30,13 @@ class ofApp : public ofBaseApp{
         void attractionChanged(float & n);
         void repulsionChanged(float & n);
         void rampChanged(float & n);
+        void frictionChanged(float & n);
     
-        ofVideoPlayer 		fingerMovie;
-        bool                isPlaying;
+        void createPointNear(float x, float y, float radius);
+        void stopRecording();
+        void startRecording();
+        void updateSimulation();
+        void updateTriangulation();
     
         //GeometricStuff
         Attractor myAttractor;
@@ -46,16 +53,26 @@ class ofApp : public ofBaseApp{
         float r_speed;
     
         //internal settings
-        float camWidth;
-        float camHeight;
-        bool showHelp;
-        ofRectangle outputWindow;
+        int                 currentFrame;
+        float               camWidth;
+        float               camHeight;
+        ofRectangle         outputWindow;
+        ofxCsv              pointRecorder;
+        ofVideoPlayer 		fingerMovie;
+        vector<ofPoint>     pointData;
+        bool                showHelp;
+        bool                doSave;
+        bool                isRecording;
+        bool                isRendering;    
+        unsigned long       lastTimer;
     
         // Parameters to change
         ofxPanel gui;
-        ofParameter<float> radius;
-        ofParameter<float> attraction;
-        ofParameter<float> repulsion;
-        ofParameter<float> ramp;
-        ofParameter<float> maxTriangleArea;
+        ofParameter<float>  radius;
+        ofParameter<float>  attraction;
+        ofParameter<float>  repulsion;
+        ofParameter<float>  ramp;
+        ofParameter<float>  friction;
+        ofParameter<float>  scatter;
+        ofParameter<float>  maxTriangleArea;
 };
