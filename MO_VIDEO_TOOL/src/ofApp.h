@@ -56,6 +56,8 @@ class ofApp : public ofBaseApp{
         int                 currentFrame;
         float               camWidth;
         float               camHeight;
+        float               clippingDistance;
+        ofPoint             clippingAnchor;
         ofRectangle         outputWindow;
         ofxCsv              pointRecorder;
         ofVideoPlayer 		fingerMovie;
@@ -65,6 +67,7 @@ class ofApp : public ofBaseApp{
         bool                isRecording;
         bool                isRendering;    
         unsigned long       lastTimer;
+
     
         // Parameters to change
         ofxPanel gui;

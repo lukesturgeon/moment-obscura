@@ -22,6 +22,8 @@ void ofApp::setup(){
     camWidth = fingerMovie.width;
     camHeight = fingerMovie.height;
     showHelp = true;
+    clippingAnchor.set(ofGetWidth()/2, ofGetHeight()/2);
+    clippingDistance = 500;
     
     // Setup GeometricStuff
     a_speed = .5;
@@ -96,11 +98,18 @@ void ofApp::stopRecording() {
 }
 
 void ofApp::createPointNear(float x, float y, float radius) {
-    Node n = Node();
-    n.setPosition( x+ofRandom(-radius,radius), y+ofRandom(-radius,radius) );
-    n.setBoundary( 0,0,ofGetWidth(),ofGetHeight() );
-    n.setDamping(0.001);
-    myNodes.push_back( n );
+    
+    ofPoint p = ofPoint(x+ofRandom(-radius,radius),
+                        y+ofRandom(-radius,radius));
+    
+    if(clippingAnchor.distance( p ) <= clippingDistance)
+    {
+        Node n = Node();
+        n.setPosition( p );
+        //    n.setBoundary( 0,0,ofGetWidth(),ofGetHeight() );
+        n.setDamping(0.001);
+        myNodes.push_back( n );
+    }
 }
 
 void ofApp::updateTriangulation() {
@@ -210,7 +219,7 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     
-    ofBackground(0);
+    ofBackground(0,255,0);
 
     // draw coloured shapes
     ofPixelsRef pixelsRef = fingerMovie.getPixelsRef();
@@ -309,6 +318,9 @@ void ofApp::draw(){
         ofPopStyle();
     }
     
+    ofSetColor(100, 0, 100);
+    ofNoFill();
+    ofCircle(ofGetWidth()/2, ofGetHeight()/2, 500);
     
 }
 
